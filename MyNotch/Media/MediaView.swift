@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MediaView: View {
     @ObservedObject var media: MediaStore
+    @ObservedObject var lyrics: LyricsStore
     @State private var scrub: Double?
     var body: some View {
         Group {
@@ -32,6 +33,7 @@ struct MediaView: View {
                         control(track.playing ? "Pause" : "Play", track.playing ? "pause.fill" : "play.fill", .toggle)
                         control("Next track", "forward.fill", .next)
                     }
+                    LyricsView(lyrics: lyrics, track: track).frame(height: 54)
                 }
             } else {
                 Text(media.message).font(.subheadline).foregroundStyle(.secondary)

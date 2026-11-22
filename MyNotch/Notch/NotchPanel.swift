@@ -11,7 +11,7 @@ final class NotchPanel: NSPanel {
     private var motion: Task<Void, Never>?
     private var expanded = false
 
-    init(display: NSScreen, media: MediaStore) {
+    init(display: NSScreen, media: MediaStore, lyrics: LyricsStore) {
         let screen = display.frame
         let inset = display.safeAreaInsets.top
         let left = display.auxiliaryTopLeftArea ?? .zero
@@ -24,9 +24,9 @@ final class NotchPanel: NSPanel {
         closedFrame = NSRect(x: center - width / 2, y: top - height, width: width, height: height)
         idleFrame = closedFrame
         let openWidth = min(screen.width, max(width + 80, 320))
-        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 132,
-                           width: openWidth, height: height + 132)
-        surface = NotchView(hasNotch: hasNotch, media: media)
+        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 196,
+                           width: openWidth, height: height + 196)
+        surface = NotchView(hasNotch: hasNotch, media: media, lyrics: lyrics)
         super.init(contentRect: closedFrame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         isOpaque = false

@@ -28,9 +28,11 @@ struct MyNotchApp: App {
 
 final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     private let media = MediaStore()
+    private let lyrics = LyricsStore()
     private var panels: [NotchPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        lyrics.follow(media)
         media.start()
         refreshDisplays()
     }
@@ -41,7 +43,7 @@ final class DisplayCoordinator: NSObject, NSApplicationDelegate {
 
     private func refreshDisplays() {
         panels.forEach { $0.dismiss() }
-        panels = NSScreen.screens.map { NotchPanel(display: $0, media: media) }
+        panels = NSScreen.screens.map { NotchPanel(display: $0, media: media, lyrics: lyrics) }
         panels.forEach { $0.orderFrontRegardless() }
     }
 }

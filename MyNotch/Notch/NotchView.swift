@@ -8,9 +8,9 @@ final class NotchView: NSView {
     var progress: CGFloat = 0 { didSet { needsDisplay = true; needsLayout = true } }
     override var isFlipped: Bool { true }
 
-    init(hasNotch: Bool, media: MediaStore) {
+    init(hasNotch: Bool, media: MediaStore, lyrics: LyricsStore) {
         self.hasNotch = hasNotch
-        expanded = NSHostingView(rootView: MediaView(media: media))
+        expanded = NSHostingView(rootView: MediaView(media: media, lyrics: lyrics))
         compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
         addSubview(expanded)
@@ -54,7 +54,7 @@ final class NotchView: NSView {
 
     override func layout() {
         super.layout()
-        expanded.frame = NSRect(x: 21, y: bounds.height - 125, width: max(0, bounds.width - 42), height: 118)
+        expanded.frame = NSRect(x: 21, y: bounds.height - 189, width: max(0, bounds.width - 42), height: 182)
         expanded.isHidden = progress < 0.92
         compact.isHidden = progress > 0.08
         let size = min(18, max(8, bounds.height - 4))
