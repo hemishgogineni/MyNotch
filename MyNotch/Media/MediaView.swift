@@ -28,11 +28,7 @@ struct MediaView: View {
                             }
                             .labelsHidden().disabled(track.duration <= 0)
                     }
-                    HStack(spacing: 26) {
-                        control("Previous track", "backward.fill", .previous)
-                        control(track.playing ? "Pause" : "Play", track.playing ? "pause.fill" : "play.fill", .toggle)
-                        control("Next track", "forward.fill", .next)
-                    }
+                    transport(for: track)
                     LyricsView(lyrics: lyrics, track: track).frame(height: 54)
                 }
             } else {
@@ -41,10 +37,30 @@ struct MediaView: View {
         }.environment(\.colorScheme, .dark)
     }
 
+    @ViewBuilder
+    private func transport(for track: Track) -> some View {
+        if #available(macOS 26, *) {
+            GlassEffectContainer(spacing: 6) {
+                buttons(for: track).buttonStyle(.glass)
+            }
+        } else {
+            buttons(for: track).buttonStyle(.bordered)
+        }
+    }
+
+    private func buttons(for track: Track) -> some View {
+        HStack(spacing: 12) {
+            control("Previous track", "backward.fill", .previous)
+            control(track.playing ? "Pause" : "Play", track.playing ? "pause.fill" : "play.fill", .toggle)
+            control("Next track", "forward.fill", .next)
+        }
+        .controlSize(.small)
+    }
+
     private func control(_ label: String, _ symbol: String, _ action: Transport) -> some View {
         Button { media.send(action) } label: {
             Image(systemName: symbol).frame(width: 28, height: 23)
-        }.buttonStyle(.plain).accessibilityLabel(label).help(label)
+        }.accessibilityLabel(label).help(label)
     }
 }
 

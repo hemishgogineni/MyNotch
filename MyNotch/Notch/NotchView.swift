@@ -1,6 +1,7 @@
 import SwiftUI
 
 final class NotchView: NSView {
+    private let material = NSHostingView(rootView: NotchMaterial())
     private let expanded: NSHostingView<MediaView>
     private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
@@ -13,6 +14,8 @@ final class NotchView: NSView {
         expanded = NSHostingView(rootView: MediaView(media: media, lyrics: lyrics))
         compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
+        material.sizingOptions = []
+        addSubview(material)
         addSubview(expanded)
         addSubview(compact)
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited],
@@ -48,14 +51,23 @@ final class NotchView: NSView {
                        controlPoint2: NSPoint(x: w - lip * 0.55, y: 0))
             body.close()
         }
-        NSColor.black.setFill()
+        NSColor.black.withAlphaComponent(1 - reveal).setFill()
         body.fill()
+    }
+
+    private var reveal: CGFloat {
+        if progress >= 1 { return 1 }
+        return max(0, (progress - 0.55) / 0.45)
     }
 
     override func layout() {
         super.layout()
+        material.frame = bounds
+        material.isHidden = reveal == 0
+        material.alphaValue = reveal
         expanded.frame = NSRect(x: 21, y: bounds.height - 189, width: max(0, bounds.width - 42), height: 182)
-        expanded.isHidden = progress < 0.92
+        expanded.isHidden = reveal == 0
+        expanded.alphaValue = reveal
         compact.isHidden = progress > 0.08
         let size = min(18, max(8, bounds.height - 4))
         compact.frame = NSRect(x: 5, y: (bounds.height - size) / 2, width: max(0, bounds.width - 10), height: size)
