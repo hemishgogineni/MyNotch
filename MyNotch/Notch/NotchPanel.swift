@@ -1,14 +1,17 @@
 import AppKit
+import Combine
 
 final class NotchPanel: NSPanel {
-    private let closedFrame: NSRect
+    private let idleFrame: NSRect
+    private var subscription: AnyCancellable?
+    private var closedFrame: NSRect
     private let openFrame: NSRect
     private let surface: NotchView
     private var delay: Task<Void, Never>?
     private var motion: Task<Void, Never>?
     private var expanded = false
 
-    init(display: NSScreen) {
+    init(display: NSScreen, media: MediaStore) {
         let screen = display.frame
         let inset = display.safeAreaInsets.top
         let left = display.auxiliaryTopLeftArea ?? .zero
@@ -19,10 +22,11 @@ final class NotchPanel: NSPanel {
         let center = hasNotch ? (left.maxX + right.minX) / 2 : screen.midX
         let top = screen.maxY - (hasNotch ? 0 : 3)
         closedFrame = NSRect(x: center - width / 2, y: top - height, width: width, height: height)
-        let openWidth = min(screen.width, max(width + 68, 280))
-        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 62,
-                           width: openWidth, height: height + 62)
-        surface = NotchView(hasNotch: hasNotch)
+        idleFrame = closedFrame
+        let openWidth = min(screen.width, max(width + 80, 320))
+        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 132,
+                           width: openWidth, height: height + 132)
+        surface = NotchView(hasNotch: hasNotch, media: media)
         super.init(contentRect: closedFrame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         isOpaque = false
@@ -35,6 +39,11 @@ final class NotchPanel: NSPanel {
         contentView = surface
         surface.hover = { [weak self] inside in self?.schedule(inside) }
         setFrame(closedFrame, display: true)
+        subscription = media.$track.map { $0?.playing == true }.removeDuplicates().sink { [weak self] playing in
+            guard let self else { return }
+            self.closedFrame = self.idleFrame.insetBy(dx: playing && hasNotch ? -28 : 0, dy: 0)
+            self.apply(self.surface.progress)
+        }
     }
 
     override var canBecomeKey: Bool { false }

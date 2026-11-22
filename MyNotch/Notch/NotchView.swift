@@ -1,17 +1,23 @@
-import AppKit
+import SwiftUI
 
 final class NotchView: NSView {
+    private let expanded: NSHostingView<MediaView>
+    private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
     var hover: ((Bool) -> Void)?
-    var progress: CGFloat = 0 { didSet { needsDisplay = true } }
+    var progress: CGFloat = 0 { didSet { needsDisplay = true; needsLayout = true } }
     override var isFlipped: Bool { true }
 
-    init(hasNotch: Bool) {
+    init(hasNotch: Bool, media: MediaStore) {
         self.hasNotch = hasNotch
+        expanded = NSHostingView(rootView: MediaView(media: media))
+        compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
+        addSubview(expanded)
+        addSubview(compact)
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited],
                                        owner: self, userInfo: nil))
-        setAccessibilityElement(true)
+        setAccessibilityElement(false)
         setAccessibilityLabel("MyNotch")
     }
 
@@ -44,11 +50,14 @@ final class NotchView: NSView {
         }
         NSColor.black.setFill()
         body.fill()
-        guard p > 0.55 else { return }
-        let title = NSAttributedString(string: "MyNotch", attributes: [
-            .font: NSFont.systemFont(ofSize: 16, weight: .semibold),
-            .foregroundColor: NSColor.white.withAlphaComponent((p - 0.55) / 0.45)
-        ])
-        title.draw(at: NSPoint(x: (w - title.size().width) / 2, y: h - 31 - title.size().height / 2))
+    }
+
+    override func layout() {
+        super.layout()
+        expanded.frame = NSRect(x: 21, y: bounds.height - 125, width: max(0, bounds.width - 42), height: 118)
+        expanded.isHidden = progress < 0.92
+        compact.isHidden = progress > 0.08
+        let size = min(18, max(8, bounds.height - 4))
+        compact.frame = NSRect(x: 5, y: (bounds.height - size) / 2, width: max(0, bounds.width - 10), height: size)
     }
 }
