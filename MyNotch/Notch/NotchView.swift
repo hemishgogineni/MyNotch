@@ -3,6 +3,8 @@ import SwiftUI
 final class NotchView: NSView {
     private let material = NSHostingView(rootView: NotchMaterial())
     private let expanded: NSHostingView<MediaView>
+    private let banner: NSHostingView<ActivityLabel>
+    private let hardware: HardwareStatus
     private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
     var openOnClick: (() -> Void)?
@@ -10,15 +12,18 @@ final class NotchView: NSView {
     var progress: CGFloat = 0 { didSet { needsDisplay = true; needsLayout = true } }
     override var isFlipped: Bool { true }
 
-    init(hasNotch: Bool, media: MediaStore, lyrics: LyricsStore) {
+    init(hasNotch: Bool, media: MediaStore, lyrics: LyricsStore, hardware: HardwareStatus) {
+        self.hardware = hardware
+        banner = NSHostingView(rootView: ActivityLabel(hardware: hardware))
         self.hasNotch = hasNotch
-        expanded = NSHostingView(rootView: MediaView(media: media, lyrics: lyrics))
+        expanded = NSHostingView(rootView: MediaView(media: media, lyrics: lyrics, hardware: hardware))
         compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
         material.sizingOptions = []
         addSubview(material)
         addSubview(expanded)
         addSubview(compact)
+        addSubview(banner)
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited],
                                        owner: self, userInfo: nil))
         setAccessibilityElement(false)
@@ -74,10 +79,12 @@ final class NotchView: NSView {
         material.frame = bounds
         material.isHidden = reveal == 0
         material.alphaValue = reveal
-        expanded.frame = NSRect(x: 21, y: bounds.height - 189, width: max(0, bounds.width - 42), height: 182)
+        expanded.frame = NSRect(x: 21, y: bounds.height - 233, width: max(0, bounds.width - 42), height: 226)
         expanded.isHidden = reveal == 0
         expanded.alphaValue = reveal
-        compact.isHidden = progress > 0.08
+        banner.frame = NSRect(x: 12, y: bounds.height - 30, width: max(0, bounds.width - 24), height: 26)
+        banner.isHidden = hardware.activity == nil || progress > 0.08
+        compact.isHidden = progress > 0.08 || hardware.activity != nil
         let size = min(18, max(8, bounds.height - 4))
         compact.frame = NSRect(x: 5, y: (bounds.height - size) / 2, width: max(0, bounds.width - 10), height: size)
     }

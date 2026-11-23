@@ -3,9 +3,10 @@ import SwiftUI
 struct MediaView: View {
     @ObservedObject var media: MediaStore
     @ObservedObject var lyrics: LyricsStore
+    @ObservedObject var hardware: HardwareStatus
     @State private var scrub: Double?
     var body: some View {
-        Group {
+        VStack(spacing: 6) {
             if let track = media.track {
                 VStack(spacing: 8) {
                     HStack(spacing: 10) {
@@ -33,6 +34,11 @@ struct MediaView: View {
                 }
             } else {
                 Text(media.message).font(.subheadline).foregroundStyle(.secondary)
+            }
+            if hardware.activity != nil {
+                ActivityLabel(hardware: hardware)
+            } else {
+                HardwareRows(battery: hardware.battery, pods: hardware.pods)
             }
         }.environment(\.colorScheme, .dark)
     }

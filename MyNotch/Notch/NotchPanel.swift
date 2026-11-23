@@ -12,7 +12,7 @@ final class NotchPanel: NSPanel {
     private var expanded = false
     private var pointerInside: Bool?
 
-    init(display: NSScreen, media: MediaStore, lyrics: LyricsStore) {
+    init(display: NSScreen, media: MediaStore, lyrics: LyricsStore, hardware: HardwareStatus) {
         let screen = display.frame
         let inset = display.safeAreaInsets.top
         let left = display.auxiliaryTopLeftArea ?? .zero
@@ -25,9 +25,9 @@ final class NotchPanel: NSPanel {
         closedFrame = NSRect(x: center - width / 2, y: top - height, width: width, height: height)
         idleFrame = closedFrame
         let openWidth = min(screen.width, max(width + 80, 320))
-        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 196,
-                           width: openWidth, height: height + 196)
-        surface = NotchView(hasNotch: hasNotch, media: media, lyrics: lyrics)
+        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 240,
+                           width: openWidth, height: height + 240)
+        surface = NotchView(hasNotch: hasNotch, media: media, lyrics: lyrics, hardware: hardware)
         super.init(contentRect: closedFrame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         isOpaque = false
@@ -47,9 +47,13 @@ final class NotchPanel: NSPanel {
             self.transition(to: true)
         }
         setFrame(closedFrame, display: true)
-        subscription = media.$track.map { $0?.playing == true }.removeDuplicates().sink { [weak self] playing in
+        subscription = media.$track.map { $0?.playing == true }.removeDuplicates().combineLatest(hardware.$activity).sink { [weak self] playing, activity in
             guard let self else { return }
             self.closedFrame = self.idleFrame.insetBy(dx: playing && hasNotch ? -28 : 0, dy: 0)
+            if activity != nil {
+                let width = min(screen.width, max(260, self.idleFrame.width))
+                self.closedFrame = NSRect(x: center - width / 2, y: top - height - 32, width: width, height: height + 32)
+            }
             self.apply(self.surface.progress)
         }
     }
