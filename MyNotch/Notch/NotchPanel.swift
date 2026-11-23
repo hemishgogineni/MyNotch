@@ -24,9 +24,9 @@ final class NotchPanel: NSPanel {
         let top = screen.maxY - (hasNotch ? 0 : 3)
         closedFrame = NSRect(x: center - width / 2, y: top - height, width: width, height: height)
         idleFrame = closedFrame
-        let openWidth = min(screen.width, max(width + 80, 320))
-        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - 240,
-                           width: openWidth, height: height + 240)
+        let openWidth = min(screen.width, max(width + 80, 560))
+        openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - NotchView.expandedDepth,
+                           width: openWidth, height: height + NotchView.expandedDepth)
         surface = NotchView(hasNotch: hasNotch, media: media, lyrics: lyrics, hardware: hardware)
         super.init(contentRect: closedFrame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)

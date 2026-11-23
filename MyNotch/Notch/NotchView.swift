@@ -1,6 +1,7 @@
 import SwiftUI
 
 final class NotchView: NSView {
+    static let expandedDepth: CGFloat = 136
     private let material = NSHostingView(rootView: NotchMaterial())
     private let expanded: NSHostingView<MediaView>
     private let banner: NSHostingView<ActivityLabel>
@@ -79,7 +80,7 @@ final class NotchView: NSView {
         material.frame = bounds
         material.isHidden = reveal == 0
         material.alphaValue = reveal
-        expanded.frame = NSRect(x: 21, y: bounds.height - 233, width: max(0, bounds.width - 42), height: 226)
+        expanded.frame = NSRect(x: 21, y: bounds.height - Self.expandedDepth + 8, width: max(0, bounds.width - 42), height: Self.expandedDepth - 16)
         expanded.isHidden = reveal == 0
         expanded.alphaValue = reveal
         banner.frame = NSRect(x: 12, y: bounds.height - 30, width: max(0, bounds.width - 24), height: 26)

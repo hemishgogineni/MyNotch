@@ -6,7 +6,7 @@ struct MediaView: View {
     @ObservedObject var hardware: HardwareStatus
     @State private var scrub: Double?
     var body: some View {
-        VStack(spacing: 6) {
+        HStack(spacing: 18) {
             if let track = media.track {
                 VStack(spacing: 8) {
                     HStack(spacing: 10) {
@@ -30,16 +30,23 @@ struct MediaView: View {
                             .labelsHidden().disabled(track.duration <= 0)
                     }
                     transport(for: track)
-                    LyricsView(lyrics: lyrics, track: track).frame(height: 54)
                 }
+                .frame(maxWidth: .infinity)
             } else {
                 Text(media.message).font(.subheadline).foregroundStyle(.secondary)
             }
-            if hardware.activity != nil {
-                ActivityLabel(hardware: hardware)
-            } else {
-                HardwareRows(battery: hardware.battery, pods: hardware.pods)
+            Divider()
+            VStack(alignment: .leading, spacing: 6) {
+                if let track = media.track {
+                    LyricsView(lyrics: lyrics, track: track)
+                }
+                if hardware.activity != nil {
+                    ActivityLabel(hardware: hardware)
+                } else {
+                    HardwareRows(battery: hardware.battery, pods: hardware.pods)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }.environment(\.colorScheme, .dark)
     }
 
