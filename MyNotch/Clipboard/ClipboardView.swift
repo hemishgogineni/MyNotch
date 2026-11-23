@@ -5,7 +5,14 @@ struct ClipboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label("Clipboard", systemImage: "clipboard").font(.headline)
+            HStack {
+                Label("Clipboard", systemImage: "clipboard").font(.headline)
+                Spacer()
+                Button("Clear", action: store.clearHistory)
+                    .buttonStyle(.plain).font(.caption)
+                    .disabled(store.entries.isEmpty)
+                    .help("Clear MyNotch clipboard history")
+            }
             if store.entries.isEmpty {
                 Text("Copy an item or drop files here.").font(.caption).foregroundStyle(.secondary)
             } else {
@@ -19,7 +26,15 @@ struct ClipboardView: View {
                                 Button {
                                     store.restore(clip)
                                 } label: {
-                                    Label(clip.title, systemImage: clip.symbol)
+                                    Label {
+                                            Text(clip.title)
+                                        } icon: {
+                                            if let thumbnail = clip.thumbnail {
+                                                Image(nsImage: thumbnail).resizable().scaledToFit().frame(width: 28, height: 20)
+                                            } else {
+                                                Image(systemName: clip.symbol)
+                                            }
+                                        }
                                         .font(.callout).lineLimit(1)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 3).contentShape(Rectangle())

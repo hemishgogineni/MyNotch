@@ -27,7 +27,7 @@ final class NotchView: NSView {
         addSubview(expanded)
         addSubview(compact)
         addSubview(banner)
-        registerForDraggedTypes([.fileURL])
+        registerForDraggedTypes([.fileURL] + NSImage.imageTypes.map { NSPasteboard.PasteboardType($0) })
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited],
                                        owner: self, userInfo: nil))
         setAccessibilityElement(false)
@@ -45,7 +45,7 @@ final class NotchView: NSView {
     override func mouseDown(with event: NSEvent) { openOnClick?() }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        guard sender.draggingPasteboard.availableType(from: [.fileURL]) != nil else { return [] }
+        guard sender.draggingPasteboard.types?.contains(where: { $0 == .fileURL || ClipboardStore.isImage($0) }) == true else { return [] }
         openOnClick?()
         return .copy
     }
@@ -53,7 +53,7 @@ final class NotchView: NSView {
     override func draggingExited(_ sender: NSDraggingInfo?) { hover?(false) }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        clipboard.holdFiles(from: sender.draggingPasteboard)
+        clipboard.acceptDrop(from: sender.draggingPasteboard)
     }
 
     override func mouseEntered(with event: NSEvent) { hover?(true) }
