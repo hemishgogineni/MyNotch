@@ -31,15 +31,22 @@ final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     private let hardware = HardwareStatus()
     private let clipboard = ClipboardStore()
     private var mouseMonitor: Any?
+    private var localMouseMonitor: Any?
     private var panels: [NotchPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         clipboard.start()
         media.start()
         hardware.start()
-        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown]) { [weak self] event in
             let point = NSEvent.mouseLocation
+            if event.type == .leftMouseDown { self?.panels.forEach { $0.pointerClicked(at: point) } }
             self?.panels.forEach { $0.updateHover(at: point) }
+        }
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseUp, .leftMouseDown]) { [weak self] event in
+            if event.type == .leftMouseDown { self?.panels.forEach { $0.pointerClicked(at: NSEvent.mouseLocation) } }
+            self?.panels.forEach { $0.updateHover(at: NSEvent.mouseLocation) }
+            return event
         }
         refreshDisplays()
     }
@@ -47,6 +54,7 @@ final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         clipboard.stop()
         hardware.stop()
+        if let localMouseMonitor { NSEvent.removeMonitor(localMouseMonitor) }
         if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
     }
 

@@ -20,6 +20,7 @@ struct Clip: Identifiable {
 
 final class ClipboardStore: NSObject, ObservableObject {
     @Published private(set) var entries: [Clip] = []
+    @Published var receivingDrop = false
     private let board: NSPasteboard
     private var generation = 0
     private var timer: Timer?
@@ -71,7 +72,7 @@ final class ClipboardStore: NSObject, ObservableObject {
 
     private func collect(from source: NSPasteboard, expectedCount: Int) -> Bool {
         guard let copied = source.pasteboardItems, !copied.isEmpty else { return false }
-        let excluded = ["org.nspasteboard.ConcealedType", "org.nspasteboard.TransientType"]
+        let excluded = ["org.nspasteboard.ConcealedType"]
         let formats: [NSPasteboard.PasteboardType] = [.fileURL, .URL, .string, .rtf, .html, .png, .tiff, .pdf]
         var items: [[NSPasteboard.PasteboardType: Data]] = []
         for item in copied {

@@ -14,7 +14,7 @@ struct ClipboardView: View {
                     .help("Clear MyNotch clipboard history")
             }
             if store.entries.isEmpty {
-                Text("Copy an item or drop files here.").font(.caption).foregroundStyle(.secondary)
+                Text("Drop files or screenshots here.").font(.caption).foregroundStyle(.secondary)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
@@ -49,5 +49,12 @@ struct ClipboardView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .overlay {
+            if store.receivingDrop {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(.white.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }

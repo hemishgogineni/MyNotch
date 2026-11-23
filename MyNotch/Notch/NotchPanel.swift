@@ -10,6 +10,8 @@ final class NotchPanel: NSPanel {
     private var delay: Task<Void, Never>?
     private var motion: Task<Void, Never>?
     private var expanded = false
+    private var dragging = false
+    private var clickedOpen = false
     private var pointerInside: Bool?
 
     init(display: NSScreen, media: MediaStore, clipboard: ClipboardStore, hardware: HardwareStatus) {
@@ -40,8 +42,20 @@ final class NotchPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         contentView = surface
         surface.hover = { [weak self] _ in self?.updateHover(at: NSEvent.mouseLocation) }
+        surface.dragState = { [weak self] active in
+            guard let self else { return }
+            self.dragging = active
+            self.delay?.cancel()
+            if active {
+                self.transition(to: true)
+            } else {
+                self.pointerInside = nil
+                self.updateHover(at: NSEvent.mouseLocation)
+            }
+        }
         surface.openOnClick = { [weak self] in
             guard let self, !self.expanded else { return }
+            self.clickedOpen = true
             self.delay?.cancel()
             self.pointerInside = true
             self.transition(to: true)
@@ -72,14 +86,24 @@ final class NotchPanel: NSPanel {
         close()
     }
 
+    func pointerClicked(at point: NSPoint) {
+        if !frame.contains(point) {
+            clickedOpen = false
+            pointerInside = nil
+            updateHover(at: point)
+        }
+    }
+
     func updateHover(at point: NSPoint) {
         // Include the small gap above the pill so the screen edge is a stable target.
-        let target = frame.union(NSRect(x: frame.minX, y: frame.maxY, width: frame.width, height: 3))
+        let base = expanded ? openFrame : frame
+        let target = base.insetBy(dx: -6, dy: -6)
         schedule(point.x >= target.minX && point.x < target.maxX &&
                  point.y >= target.minY && point.y <= target.maxY)
     }
 
     private func schedule(_ inside: Bool) {
+        guard !dragging, !clickedOpen else { return }
         guard inside != pointerInside else { return }
         pointerInside = inside
         delay?.cancel()
@@ -88,7 +112,14 @@ final class NotchPanel: NSPanel {
         delay = Task { [weak self] in
             try? await Task.sleep(for: .seconds(inside ? openDelay : 0.24))
             guard !Task.isCancelled else { return }
-            self?.transition(to: inside)
+            guard let self else { return }
+            if !inside && (self.openFrame.insetBy(dx: -6, dy: -6).contains(NSEvent.mouseLocation) ||
+                           NSEvent.pressedMouseButtons != 0) {
+                self.pointerInside = nil
+                self.updateHover(at: NSEvent.mouseLocation)
+                return
+            }
+            self.transition(to: inside)
         }
     }
 

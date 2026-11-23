@@ -3,12 +3,13 @@ import SwiftUI
 final class NotchView: NSView {
     static let expandedDepth: CGFloat = 136
     private let material = NSHostingView(rootView: NotchMaterial())
-    private let expanded: NSHostingView<MediaView>
+    private let expanded: ClipboardHostingView
     private let banner: NSHostingView<ActivityLabel>
     private let clipboard: ClipboardStore
     private let hardware: HardwareStatus
     private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
+    var dragState: ((Bool) -> Void)?
     var openOnClick: (() -> Void)?
     var hover: ((Bool) -> Void)?
     var progress: CGFloat = 0 { didSet { needsDisplay = true; needsLayout = true } }
@@ -19,10 +20,12 @@ final class NotchView: NSView {
         self.hardware = hardware
         banner = NSHostingView(rootView: ActivityLabel(hardware: hardware))
         self.hasNotch = hasNotch
-        expanded = NSHostingView(rootView: MediaView(media: media, clipboard: clipboard))
+        expanded = ClipboardHostingView(rootView: MediaView(media: media, clipboard: clipboard))
         compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
         material.sizingOptions = []
+        expanded.owner = self
+        expanded.registerForDraggedTypes([.fileURL] + NSImage.imageTypes.map { NSPasteboard.PasteboardType($0) })
         addSubview(material)
         addSubview(expanded)
         addSubview(compact)
@@ -46,14 +49,18 @@ final class NotchView: NSView {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard sender.draggingPasteboard.types?.contains(where: { $0 == .fileURL || ClipboardStore.isImage($0) }) == true else { return [] }
-        openOnClick?()
+        clipboard.receivingDrop = true
+        dragState?(true)
         return .copy
     }
 
-    override func draggingExited(_ sender: NSDraggingInfo?) { hover?(false) }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
+    override func draggingExited(_ sender: NSDraggingInfo?) { clipboard.receivingDrop = false; dragState?(false) }
+    override func draggingEnded(_ sender: NSDraggingInfo) { clipboard.receivingDrop = false; dragState?(false) }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        clipboard.acceptDrop(from: sender.draggingPasteboard)
+        defer { clipboard.receivingDrop = false; dragState?(false) }
+        return clipboard.acceptDrop(from: sender.draggingPasteboard)
     }
 
     override func mouseEntered(with event: NSEvent) { hover?(true) }
@@ -103,5 +110,21 @@ final class NotchView: NSView {
         compact.isHidden = progress > 0.08 || hardware.activity != nil
         let size = min(18, max(8, bounds.height - 4))
         compact.frame = NSRect(x: 5, y: (bounds.height - size) / 2, width: max(0, bounds.width - 10), height: size)
+    }
+}
+
+
+// Route drops over SwiftUI controls to the same destination as the collapsed notch.
+final class ClipboardHostingView: NSHostingView<MediaView> {
+    weak var owner: NotchView?
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        owner?.draggingEntered(sender) ?? []
+    }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
+    override func draggingExited(_ sender: NSDraggingInfo?) { owner?.draggingExited(sender) }
+    override func draggingEnded(_ sender: NSDraggingInfo) { owner?.draggingEnded(sender) }
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        owner?.performDragOperation(sender) ?? false
     }
 }
