@@ -54,7 +54,7 @@ final class NotchPanel: NSPanel {
             }
         }
         surface.openOnClick = { [weak self] in
-            guard let self, !self.expanded else { return }
+            guard let self else { return }
             self.clickedOpen = true
             self.delay?.cancel()
             self.pointerInside = true
@@ -87,7 +87,13 @@ final class NotchPanel: NSPanel {
     }
 
     func pointerClicked(at point: NSPoint) {
-        if !frame.contains(point) {
+        let target = expanded ? openFrame : frame
+        if target.contains(point) {
+            clickedOpen = true
+            pointerInside = true
+            delay?.cancel()
+            if !expanded { transition(to: true) }
+        } else {
             clickedOpen = false
             pointerInside = nil
             updateHover(at: point)
@@ -112,7 +118,7 @@ final class NotchPanel: NSPanel {
         delay = Task { [weak self] in
             try? await Task.sleep(for: .seconds(inside ? openDelay : 0.24))
             guard !Task.isCancelled else { return }
-            guard let self else { return }
+            guard let self, !self.clickedOpen, !self.dragging else { return }
             if !inside && (self.openFrame.insetBy(dx: -6, dy: -6).contains(NSEvent.mouseLocation) ||
                            NSEvent.pressedMouseButtons != 0) {
                 self.pointerInside = nil
