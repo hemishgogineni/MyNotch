@@ -9,6 +9,7 @@ final class NotchView: NSView {
     private let hardware: HardwareStatus
     private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
+    var expandedContentWidth: CGFloat = 518
     var dragState: ((Bool) -> Void)?
     var openOnClick: (() -> Void)?
     var hover: ((Bool) -> Void)?
@@ -23,7 +24,10 @@ final class NotchView: NSView {
         expanded = ClipboardHostingView(rootView: MediaView(media: media, clipboard: clipboard))
         compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
+        wantsLayer = true
+        layer?.masksToBounds = true
         material.sizingOptions = []
+        expanded.sizingOptions = []
         expanded.owner = self
         expanded.registerForDraggedTypes([.fileURL] + NSImage.imageTypes.map { NSPasteboard.PasteboardType($0) })
         addSubview(material)
@@ -93,8 +97,8 @@ final class NotchView: NSView {
     }
 
     private var reveal: CGFloat {
-        if progress >= 1 { return 1 }
-        return max(0, (progress - 0.55) / 0.45)
+        let phase = min(1, max(0, (progress - 0.58) / 0.42))
+        return phase * phase * (3 - 2 * phase)
     }
 
     override func layout() {
@@ -102,12 +106,18 @@ final class NotchView: NSView {
         material.frame = bounds
         material.isHidden = reveal == 0
         material.alphaValue = reveal
-        expanded.frame = NSRect(x: 21, y: bounds.height - Self.expandedDepth + 8, width: max(0, bounds.width - 42), height: Self.expandedDepth - 16)
+        // Lay out text once at its final width; reveal it inside the growing surface.
+        expanded.frame = NSRect(x: (bounds.width - expandedContentWidth) / 2,
+                                y: bounds.height - Self.expandedDepth + 8 - 5 * (1 - reveal),
+                                width: expandedContentWidth, height: Self.expandedDepth - 16)
         expanded.isHidden = reveal == 0
         expanded.alphaValue = reveal
         banner.frame = NSRect(x: 12, y: bounds.height - 30, width: max(0, bounds.width - 24), height: 26)
-        banner.isHidden = hardware.activity == nil || progress > 0.08
-        compact.isHidden = progress > 0.08 || hardware.activity != nil
+        let compactOpacity = max(0, 1 - progress / 0.25)
+        banner.alphaValue = compactOpacity
+        compact.alphaValue = compactOpacity
+        banner.isHidden = hardware.activity == nil || compactOpacity == 0
+        compact.isHidden = compactOpacity == 0 || hardware.activity != nil
         let size = min(18, max(8, bounds.height - 4))
         compact.frame = NSRect(x: 5, y: (bounds.height - size) / 2, width: max(0, bounds.width - 10), height: size)
     }

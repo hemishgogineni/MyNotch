@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import SwiftUI
 
 final class NotchPanel: NSPanel {
     private let idleFrame: NSRect
@@ -9,6 +10,7 @@ final class NotchPanel: NSPanel {
     private let surface: NotchView
     private var delay: Task<Void, Never>?
     private var motion: Task<Void, Never>?
+    private var velocity = 0.0
     private var expanded = false
     private var dragging = false
     private var clickedOpen = false
@@ -30,6 +32,7 @@ final class NotchPanel: NSPanel {
         openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - NotchView.expandedDepth,
                            width: openWidth, height: height + NotchView.expandedDepth)
         surface = NotchView(hasNotch: hasNotch, media: media, clipboard: clipboard, hardware: hardware)
+        surface.expandedContentWidth = openWidth - 42
         super.init(contentRect: closedFrame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         isOpaque = false
@@ -130,25 +133,33 @@ final class NotchPanel: NSPanel {
     }
 
     private func transition(to open: Bool) {
+        guard expanded != open else { return }
         expanded = open
         motion?.cancel()
-        let start = surface.progress
-        let end: CGFloat = open ? 1 : 0
+        let end = open ? 1.0 : 0.0
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            velocity = 0
             apply(end)
             return
         }
+        // Preserve velocity on interruption so a reversal never starts with a jerk.
+        let spring = Spring(duration: open ? 0.46 : 0.36, bounce: open ? 0.16 : 0)
         motion = Task { [weak self] in
-            let began = ProcessInfo.processInfo.systemUptime
+            var previous = ProcessInfo.processInfo.systemUptime
+            let began = previous
             while !Task.isCancelled {
-                let t = ProcessInfo.processInfo.systemUptime - began
                 guard let self else { return }
-                if t >= 0.42 {
+                let now = ProcessInfo.processInfo.systemUptime
+                var value = Double(self.surface.progress)
+                spring.update(value: &value, velocity: &self.velocity, target: end, deltaTime: now - previous)
+                previous = now
+                if (abs(value - end) < 0.0001 && abs(self.velocity) < 0.001) || now - began > 1.5 {
+                    self.velocity = 0
                     self.apply(end)
+                    self.motion = nil
                     return
                 }
-                let spring = 1 - exp(-16 * t) * (cos(12 * t) + (16.0 / 12) * sin(12 * t))
-                self.apply(max(0, start + (end - start) * spring))
+                self.apply(max(0, value))
                 try? await Task.sleep(for: .milliseconds(8))
             }
         }
