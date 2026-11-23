@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct MyNotchApp: App {
     @NSApplicationDelegateAdaptor(DisplayCoordinator.self) private var coordinator
-    @AppStorage("hoverDelay") private var hoverDelay = 0.16
+    @AppStorage("hoverDelay") private var hoverDelay = 0.06
 
     var body: some Scene {
         MenuBarExtra("MyNotch", systemImage: "rectangle.topthird.inset.filled") {
@@ -14,7 +14,7 @@ struct MyNotchApp: App {
         }
         Settings {
             Form {
-                Slider(value: $hoverDelay, in: 0.05...0.5, step: 0.01) {
+                Slider(value: $hoverDelay, in: 0...0.5, step: 0.01) {
                     Text("Hover delay")
                 }
                 Text("\(Int((hoverDelay * 1000).rounded())) milliseconds")
@@ -43,6 +43,10 @@ final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     private var panels: [NotchPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Migrate the original default while retaining other chosen delays.
+        if UserDefaults.standard.double(forKey: "hoverDelay") == 0.16 {
+            UserDefaults.standard.set(0.06, forKey: "hoverDelay")
+        }
         clipboard.start()
         media.start()
         hardware.start()

@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import QuartzCore
 
 final class NotchPanel: NSPanel {
     private let idleFrame: NSRect
@@ -9,7 +10,10 @@ final class NotchPanel: NSPanel {
     private let openFrame: NSRect
     private let surface: NotchView
     private var delay: Task<Void, Never>?
-    private var motion: Task<Void, Never>?
+    private var displayLink: CADisplayLink?
+    private var spring = Spring(duration: 0.28, bounce: 0.08)
+    private var previousFrameTime = 0.0
+    private var animationStart = 0.0
     private var velocity = 0.0
     private var expanded = false
     private var dragging = false
@@ -84,7 +88,8 @@ final class NotchPanel: NSPanel {
 
     func dismiss() {
         delay?.cancel()
-        motion?.cancel()
+        displayLink?.invalidate()
+        displayLink = nil
         surface.hover = nil
         close()
     }
@@ -117,9 +122,9 @@ final class NotchPanel: NSPanel {
         pointerInside = inside
         delay?.cancel()
         guard expanded != inside else { return }
-        let openDelay = UserDefaults.standard.object(forKey: "hoverDelay") as? Double ?? 0.16
+        let openDelay = UserDefaults.standard.object(forKey: "hoverDelay") as? Double ?? 0.06
         delay = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(inside ? openDelay : 0.24))
+            try? await Task.sleep(for: .seconds(inside ? openDelay : 0.12))
             guard !Task.isCancelled else { return }
             guard let self, !self.clickedOpen, !self.dragging else { return }
             if !inside && (self.openFrame.insetBy(dx: -6, dy: -6).contains(NSEvent.mouseLocation) ||
@@ -135,34 +140,47 @@ final class NotchPanel: NSPanel {
     private func transition(to open: Bool) {
         guard expanded != open else { return }
         expanded = open
-        motion?.cancel()
+        displayLink?.invalidate()
+        displayLink = nil
         let end = open ? 1.0 : 0.0
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             velocity = 0
             apply(end)
             return
         }
-        // Preserve velocity on interruption so a reversal never starts with a jerk.
-        let spring = Spring(duration: open ? 0.46 : 0.36, bounce: open ? 0.16 : 0)
-        motion = Task { [weak self] in
-            var previous = ProcessInfo.processInfo.systemUptime
-            let began = previous
-            while !Task.isCancelled {
-                guard let self else { return }
-                let now = ProcessInfo.processInfo.systemUptime
-                var value = Double(self.surface.progress)
-                spring.update(value: &value, velocity: &self.velocity, target: end, deltaTime: now - previous)
-                previous = now
-                if (abs(value - end) < 0.0001 && abs(self.velocity) < 0.001) || now - began > 1.5 {
-                    self.velocity = 0
-                    self.apply(end)
-                    self.motion = nil
-                    return
-                }
-                self.apply(max(0, value))
-                try? await Task.sleep(for: .milliseconds(8))
-            }
+        // Display-linked steps coalesce layout and rendering into one screen refresh.
+        spring = Spring(duration: open ? 0.28 : 0.24, bounce: open ? 0.08 : 0)
+        previousFrameTime = CACurrentMediaTime()
+        animationStart = previousFrameTime
+        let link = surface.displayLink(target: self, selector: #selector(animateFrame(_:)))
+        displayLink = link
+        link.add(to: .main, forMode: .common)
+    }
+
+    @objc private func animateFrame(_ link: CADisplayLink) {
+        let now = CACurrentMediaTime()
+        let end = expanded ? 1.0 : 0.0
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            finishAnimation(at: end)
+            return
         }
+        var value = Double(surface.progress)
+        spring.update(value: &value, velocity: &velocity, target: end,
+                      deltaTime: max(0, now - previousFrameTime))
+        previousFrameTime = now
+        // Below one tenth of a point, further window resizes are imperceptible.
+        if (abs(value - end) < 0.0002 && abs(velocity) < 0.01) || now - animationStart > 0.65 {
+            finishAnimation(at: end)
+            return
+        }
+        apply(max(0, value))
+    }
+
+    private func finishAnimation(at value: Double) {
+        displayLink?.invalidate()
+        displayLink = nil
+        velocity = 0
+        apply(value)
     }
 
     private func apply(_ progress: CGFloat) {
@@ -171,6 +189,6 @@ final class NotchPanel: NSPanel {
         setFrame(NSRect(x: mix(closedFrame.minX, openFrame.minX),
                         y: mix(closedFrame.minY, openFrame.minY),
                         width: mix(closedFrame.width, openFrame.width),
-                        height: mix(closedFrame.height, openFrame.height)), display: true)
+                        height: mix(closedFrame.height, openFrame.height)), display: false)
     }
 }

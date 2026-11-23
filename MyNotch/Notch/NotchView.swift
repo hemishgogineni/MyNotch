@@ -92,12 +92,12 @@ final class NotchView: NSView {
                        controlPoint2: NSPoint(x: w - lip * 0.55, y: 0))
             body.close()
         }
-        NSColor.black.withAlphaComponent(1 - reveal).setFill()
+        NSColor.black.setFill()
         body.fill()
     }
 
     private var reveal: CGFloat {
-        let phase = min(1, max(0, (progress - 0.58) / 0.42))
+        let phase = min(1, max(0, (progress - 0.18) / 0.65))
         return phase * phase * (3 - 2 * phase)
     }
 
