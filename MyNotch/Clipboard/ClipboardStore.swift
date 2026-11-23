@@ -6,6 +6,13 @@ struct Clip: Identifiable {
     let items: [[NSPasteboard.PasteboardType: Data]]
     let title: String
     let symbol: String
+    var files: [URL] {
+        items.compactMap { item in
+            guard let data = item[.fileURL], let url = URL(dataRepresentation: data, relativeTo: nil),
+                  url.isFileURL else { return nil }
+            return url
+        }
+    }
 }
 
 final class ClipboardStore: NSObject, ObservableObject {
@@ -63,6 +70,13 @@ final class ClipboardStore: NSObject, ObservableObject {
         guard board.changeCount == count, let first = copied.first else { return }
         let title: String
         let symbol: String
+    var files: [URL] {
+        items.compactMap { item in
+            guard let data = item[.fileURL], let url = URL(dataRepresentation: data, relativeTo: nil),
+                  url.isFileURL else { return nil }
+            return url
+        }
+    }
         if let path = first.string(forType: .fileURL), let url = URL(string: path) {
             title = items.count > 1 ? "\(items.count) files" : url.lastPathComponent
             symbol = "doc"
@@ -77,6 +91,18 @@ final class ClipboardStore: NSObject, ObservableObject {
             symbol = "doc"
         }
         guard board.changeCount == count else { return }
+        insert(items: items, title: title, symbol: symbol)
+    }
+
+    func holdFiles(from pasteboard: NSPasteboard) -> Bool {
+        guard timer != nil, let urls = pasteboard.readObjects(forClasses: [NSURL.self],
+              options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty else { return false }
+        let items = urls.map { [NSPasteboard.PasteboardType.fileURL: $0.dataRepresentation] }
+        insert(items: items, title: urls.count == 1 ? urls[0].lastPathComponent : "\(urls.count) files", symbol: "doc")
+        return true
+    }
+
+    private func insert(items: [[NSPasteboard.PasteboardType: Data]], title: String, symbol: String) {
         entries.removeAll { $0.items == items }
         entries.insert(Clip(items: items, title: title, symbol: symbol), at: 0)
     }

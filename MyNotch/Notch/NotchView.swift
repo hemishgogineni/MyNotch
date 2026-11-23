@@ -5,6 +5,7 @@ final class NotchView: NSView {
     private let material = NSHostingView(rootView: NotchMaterial())
     private let expanded: NSHostingView<MediaView>
     private let banner: NSHostingView<ActivityLabel>
+    private let clipboard: ClipboardStore
     private let hardware: HardwareStatus
     private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
@@ -14,6 +15,7 @@ final class NotchView: NSView {
     override var isFlipped: Bool { true }
 
     init(hasNotch: Bool, media: MediaStore, clipboard: ClipboardStore, hardware: HardwareStatus) {
+        self.clipboard = clipboard
         self.hardware = hardware
         banner = NSHostingView(rootView: ActivityLabel(hardware: hardware))
         self.hasNotch = hasNotch
@@ -25,6 +27,7 @@ final class NotchView: NSView {
         addSubview(expanded)
         addSubview(compact)
         addSubview(banner)
+        registerForDraggedTypes([.fileURL])
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited],
                                        owner: self, userInfo: nil))
         setAccessibilityElement(false)
@@ -40,6 +43,18 @@ final class NotchView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func mouseDown(with event: NSEvent) { openOnClick?() }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard sender.draggingPasteboard.availableType(from: [.fileURL]) != nil else { return [] }
+        openOnClick?()
+        return .copy
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) { hover?(false) }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        clipboard.holdFiles(from: sender.draggingPasteboard)
+    }
 
     override func mouseEntered(with event: NSEvent) { hover?(true) }
     override func mouseExited(with event: NSEvent) { hover?(false) }
