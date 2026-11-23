@@ -10,6 +10,7 @@ final class NotchPanel: NSPanel {
     private var delay: Task<Void, Never>?
     private var motion: Task<Void, Never>?
     private var expanded = false
+    private var pointerInside: Bool?
 
     init(display: NSScreen, media: MediaStore, lyrics: LyricsStore) {
         let screen = display.frame
@@ -33,11 +34,18 @@ final class NotchPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = false
         hidesOnDeactivate = false
+        acceptsMouseMovedEvents = true
         isReleasedWhenClosed = false
         level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 1)
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         contentView = surface
-        surface.hover = { [weak self] inside in self?.schedule(inside) }
+        surface.hover = { [weak self] _ in self?.updateHover(at: NSEvent.mouseLocation) }
+        surface.openOnClick = { [weak self] in
+            guard let self, !self.expanded else { return }
+            self.delay?.cancel()
+            self.pointerInside = true
+            self.transition(to: true)
+        }
         setFrame(closedFrame, display: true)
         subscription = media.$track.map { $0?.playing == true }.removeDuplicates().sink { [weak self] playing in
             guard let self else { return }
@@ -60,7 +68,16 @@ final class NotchPanel: NSPanel {
         close()
     }
 
+    func updateHover(at point: NSPoint) {
+        // Include the small gap above the pill so the screen edge is a stable target.
+        let target = frame.union(NSRect(x: frame.minX, y: frame.maxY, width: frame.width, height: 3))
+        schedule(point.x >= target.minX && point.x < target.maxX &&
+                 point.y >= target.minY && point.y <= target.maxY)
+    }
+
     private func schedule(_ inside: Bool) {
+        guard inside != pointerInside else { return }
+        pointerInside = inside
         delay?.cancel()
         guard expanded != inside else { return }
         let openDelay = UserDefaults.standard.object(forKey: "hoverDelay") as? Double ?? 0.16

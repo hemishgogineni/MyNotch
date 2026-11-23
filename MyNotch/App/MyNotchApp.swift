@@ -29,12 +29,21 @@ struct MyNotchApp: App {
 final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     private let media = MediaStore()
     private let lyrics = LyricsStore()
+    private var mouseMonitor: Any?
     private var panels: [NotchPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         lyrics.follow(media)
         media.start()
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+            let point = NSEvent.mouseLocation
+            self?.panels.forEach { $0.updateHover(at: point) }
+        }
         refreshDisplays()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
     }
 
     func applicationDidChangeScreenParameters(_ notification: Notification) {

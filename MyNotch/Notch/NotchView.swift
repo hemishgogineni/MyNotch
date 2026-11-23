@@ -5,6 +5,7 @@ final class NotchView: NSView {
     private let expanded: NSHostingView<MediaView>
     private let compact: NSHostingView<CompactMedia>
     private let hasNotch: Bool
+    var openOnClick: (() -> Void)?
     var hover: ((Bool) -> Void)?
     var progress: CGFloat = 0 { didSet { needsDisplay = true; needsLayout = true } }
     override var isFlipped: Bool { true }
@@ -25,6 +26,14 @@ final class NotchView: NSView {
     }
 
     required init?(coder: NSCoder) { nil }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if progress < 0.1 && bounds.contains(point) { return self }
+        return super.hitTest(point)
+    }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) { openOnClick?() }
 
     override func mouseEntered(with event: NSEvent) { hover?(true) }
     override func mouseExited(with event: NSEvent) { hover?(false) }
