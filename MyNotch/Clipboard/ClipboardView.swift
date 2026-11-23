@@ -12,6 +12,14 @@ struct ClipboardView: View {
                     .buttonStyle(.plain).font(.caption)
                     .disabled(store.entries.isEmpty)
                     .help("Clear MyNotch clipboard history")
+                Button {
+                    SettingsWindowController.shared.present()
+                } label: {
+                    Image(systemName: "gearshape").frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .help("Settings")
+                .accessibilityLabel("Settings")
             }
             if store.entries.isEmpty {
                 Text("Drop files or screenshots here.").font(.caption).foregroundStyle(.secondary)

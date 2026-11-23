@@ -92,7 +92,7 @@ final class NotchView: NSView {
                        controlPoint2: NSPoint(x: w - lip * 0.55, y: 0))
             body.close()
         }
-        NSColor.black.setFill()
+        NSColor.black.withAlphaComponent(1 - reveal).setFill()
         body.fill()
     }
 

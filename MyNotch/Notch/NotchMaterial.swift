@@ -24,20 +24,29 @@ struct ExpandedNotchShape: Shape {
 }
 
 struct NotchMaterial: View {
+    var body: some View {
+        NotchMaterialSurface().modifier(NotchAppearanceModifier())
+    }
+}
+
+private struct NotchMaterialSurface: View {
+    @AppStorage("notchOpacity") private var opacity = 0.9
+    @AppStorage("notchReduceTransparency") private var opaque = false
+    @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     private let shape = ExpandedNotchShape()
 
     var body: some View {
         Group {
-            if reduceTransparency {
-                shape.fill(Color(white: 0.10))
+            if reduceTransparency || opaque {
+                shape.fill(scheme == .dark ? Color(white: 0.10) : Color(white: 0.95))
             } else if #available(macOS 26, *) {
-                Color.clear.glassEffect(.regular.tint(.black.opacity(0.34)), in: shape)
+                Color.clear.glassEffect(.regular.tint(scheme == .dark ? .black.opacity(0.34) : .white.opacity(0.2)), in: shape)
             } else {
                 shape.fill(.regularMaterial)
             }
         }
-        .environment(\.colorScheme, .dark)
+        .opacity(reduceTransparency || opaque ? 1 : min(1, max(0.35, opacity)))
         .accessibilityHidden(true)
         .allowsHitTesting(false)
     }

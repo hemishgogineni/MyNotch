@@ -3,25 +3,13 @@ import SwiftUI
 @main
 struct MyNotchApp: App {
     @NSApplicationDelegateAdaptor(DisplayCoordinator.self) private var coordinator
-    @AppStorage("hoverDelay") private var hoverDelay = 0.06
 
     var body: some Scene {
         MenuBarExtra("MyNotch", systemImage: "rectangle.topthird.inset.filled") {
-            SettingsLink { Text("Settings…") }
+            Button("Settings…") { SettingsWindowController.shared.present() }
             Divider()
             Button("Quit MyNotch") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
-        }
-        Settings {
-            Form {
-                Slider(value: $hoverDelay, in: 0...0.5, step: 0.01) {
-                    Text("Hover delay")
-                }
-                Text("\(Int((hoverDelay * 1000).rounded())) milliseconds")
-                    .monospacedDigit()
-            }
-            .padding(24)
-            .frame(width: 320)
         }
     }
 }

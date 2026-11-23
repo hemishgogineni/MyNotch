@@ -36,7 +36,7 @@ struct MediaView: View {
             }
             Divider()
             ClipboardView(store: clipboard)
-        }.environment(\.colorScheme, .dark)
+        }.modifier(NotchAppearanceModifier())
     }
 
     @ViewBuilder
