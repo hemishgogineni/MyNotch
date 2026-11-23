@@ -29,12 +29,12 @@ struct MyNotchApp: App {
 final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     private let media = MediaStore()
     private let hardware = HardwareStatus()
-    private let lyrics = LyricsStore()
+    private let clipboard = ClipboardStore()
     private var mouseMonitor: Any?
     private var panels: [NotchPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        lyrics.follow(media)
+        clipboard.start()
         media.start()
         hardware.start()
         mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
@@ -45,6 +45,7 @@ final class DisplayCoordinator: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        clipboard.stop()
         hardware.stop()
         if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
     }
@@ -55,7 +56,7 @@ final class DisplayCoordinator: NSObject, NSApplicationDelegate {
 
     private func refreshDisplays() {
         panels.forEach { $0.dismiss() }
-        panels = NSScreen.screens.map { NotchPanel(display: $0, media: media, lyrics: lyrics, hardware: hardware) }
+        panels = NSScreen.screens.map { NotchPanel(display: $0, media: media, clipboard: clipboard, hardware: hardware) }
         panels.forEach { $0.orderFrontRegardless() }
     }
 }

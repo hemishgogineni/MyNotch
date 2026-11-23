@@ -12,7 +12,7 @@ final class NotchPanel: NSPanel {
     private var expanded = false
     private var pointerInside: Bool?
 
-    init(display: NSScreen, media: MediaStore, lyrics: LyricsStore, hardware: HardwareStatus) {
+    init(display: NSScreen, media: MediaStore, clipboard: ClipboardStore, hardware: HardwareStatus) {
         let screen = display.frame
         let inset = display.safeAreaInsets.top
         let left = display.auxiliaryTopLeftArea ?? .zero
@@ -27,7 +27,7 @@ final class NotchPanel: NSPanel {
         let openWidth = min(screen.width, max(width + 80, 560))
         openFrame = NSRect(x: center - openWidth / 2, y: screen.maxY - height - NotchView.expandedDepth,
                            width: openWidth, height: height + NotchView.expandedDepth)
-        surface = NotchView(hasNotch: hasNotch, media: media, lyrics: lyrics, hardware: hardware)
+        surface = NotchView(hasNotch: hasNotch, media: media, clipboard: clipboard, hardware: hardware)
         super.init(contentRect: closedFrame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         isOpaque = false

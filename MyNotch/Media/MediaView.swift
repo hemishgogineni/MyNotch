@@ -2,8 +2,7 @@ import SwiftUI
 
 struct MediaView: View {
     @ObservedObject var media: MediaStore
-    @ObservedObject var lyrics: LyricsStore
-    @ObservedObject var hardware: HardwareStatus
+    let clipboard: ClipboardStore
     @State private var scrub: Double?
     var body: some View {
         HStack(spacing: 18) {
@@ -36,17 +35,7 @@ struct MediaView: View {
                 Text(media.message).font(.subheadline).foregroundStyle(.secondary)
             }
             Divider()
-            VStack(alignment: .leading, spacing: 6) {
-                if let track = media.track {
-                    LyricsView(lyrics: lyrics, track: track)
-                }
-                if hardware.activity != nil {
-                    ActivityLabel(hardware: hardware)
-                } else {
-                    HardwareRows(battery: hardware.battery, pods: hardware.pods)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            ClipboardView(store: clipboard)
         }.environment(\.colorScheme, .dark)
     }
 

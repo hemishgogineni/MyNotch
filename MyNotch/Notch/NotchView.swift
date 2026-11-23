@@ -13,11 +13,11 @@ final class NotchView: NSView {
     var progress: CGFloat = 0 { didSet { needsDisplay = true; needsLayout = true } }
     override var isFlipped: Bool { true }
 
-    init(hasNotch: Bool, media: MediaStore, lyrics: LyricsStore, hardware: HardwareStatus) {
+    init(hasNotch: Bool, media: MediaStore, clipboard: ClipboardStore, hardware: HardwareStatus) {
         self.hardware = hardware
         banner = NSHostingView(rootView: ActivityLabel(hardware: hardware))
         self.hasNotch = hasNotch
-        expanded = NSHostingView(rootView: MediaView(media: media, lyrics: lyrics, hardware: hardware))
+        expanded = NSHostingView(rootView: MediaView(media: media, clipboard: clipboard))
         compact = NSHostingView(rootView: CompactMedia(media: media))
         super.init(frame: .zero)
         material.sizingOptions = []
